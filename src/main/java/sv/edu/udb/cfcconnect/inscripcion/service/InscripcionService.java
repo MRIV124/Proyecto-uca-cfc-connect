@@ -8,6 +8,7 @@ public interface InscripcionService {
     List<InscripcionResponse> findAll();
     InscripcionResponse findById(Long id);
     InscripcionResponse create(InscripcionRequest request);
+    InscripcionResponse update(Long id, InscripcionRequest request);
     InscripcionResponse cambiarEstado(Long id, String estado);
     void delete(Long id);
 }

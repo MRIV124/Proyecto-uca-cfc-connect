@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,6 +48,13 @@ public class InscripcionController {
     @PostMapping
     public ResponseEntity<InscripcionResponse> crearInscripcion(@Valid @RequestBody InscripcionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
+    }
+
+    @Operation(summary = "Actualizar una inscripcion",
+            description = "Permite cambiar cliente o curso. Si el curso cambia, ajusta el cupo del curso anterior y valida cupo en el nuevo (CupoAgotadoException si no hay). No aplica a inscripciones CANCELADA o FINALIZADA.")
+    @PutMapping("/{id}")
+    public InscripcionResponse actualizarInscripcion(@PathVariable Long id, @Valid @RequestBody InscripcionRequest request) {
+        return service.update(id, request);
     }
 
     @Operation(summary = "Cambiar el estado de una inscripcion",

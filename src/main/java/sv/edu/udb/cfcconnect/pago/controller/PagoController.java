@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,6 +47,13 @@ public class PagoController {
     @PostMapping
     public ResponseEntity<PagoResponse> crearPago(@Valid @RequestBody PagoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
+    }
+
+    @Operation(summary = "Actualizar un pago",
+            description = "No permite modificar un pago que ya este en estado PAGADO.")
+    @PutMapping("/{id}")
+    public PagoResponse actualizarPago(@PathVariable Long id, @Valid @RequestBody PagoRequest request) {
+        return service.update(id, request);
     }
 
     @Operation(summary = "Confirmar un pago", description = "Cambia el estado del pago a PAGADO.")

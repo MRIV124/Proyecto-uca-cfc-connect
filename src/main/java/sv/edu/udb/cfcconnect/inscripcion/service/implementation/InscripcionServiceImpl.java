@@ -69,6 +69,47 @@ public class InscripcionServiceImpl implements InscripcionService {
     }
 
     @Override
+    public InscripcionResponse update(Long id, InscripcionRequest request) {
+        Inscripcion inscripcion = getEntity(id);
+
+        // Regla de negocio: una inscripcion cancelada o finalizada ya no deberia editarse.
+        if (inscripcion.getEstado() == Inscripcion.Estado.CANCELADA
+                || inscripcion.getEstado() == Inscripcion.Estado.FINALIZADA) {
+            throw new IllegalArgumentException(
+                    "No se puede editar una inscripcion en estado " + inscripcion.getEstado().name() + ".");
+        }
+
+        Cliente cliente = clienteRepository.findById(request.getClienteId())
+                .orElseThrow(() -> ResourceNotFoundException.of("Cliente", request.getClienteId()));
+
+        Curso cursoNuevo = cursoRepository.findById(request.getCursoId())
+                .orElseThrow(() -> ResourceNotFoundException.of("Curso", request.getCursoId()));
+
+        Curso cursoAnterior = inscripcion.getCurso();
+
+        // Si se esta cambiando el curso, hay que liberar el cupo del curso anterior
+        // y validar/tomar cupo en el nuevo (mismo control que en create()).
+        if (!cursoAnterior.getId().equals(cursoNuevo.getId())) {
+            if (!cursoNuevo.tieneCupoDisponible()) {
+                throw new CupoAgotadoException(
+                        "No es posible mover la inscripcion: el curso '" + cursoNuevo.getNombre()
+                                + "' no tiene cupo disponible.");
+            }
+            cursoAnterior.setInscritos(Math.max(0, cursoAnterior.getInscritos() - 1));
+            cursoRepository.save(cursoAnterior);
+
+            cursoNuevo.setInscritos(cursoNuevo.getInscritos() + 1);
+            cursoRepository.save(cursoNuevo);
+        }
+
+        inscripcion.setCliente(cliente);
+        inscripcion.setCurso(cursoNuevo);
+        // El estado y la fecha original se conservan; para el estado existe /estado.
+
+        return InscripcionResponse.fromEntity(repository.save(inscripcion));
+    }
+
+    @Override
     public InscripcionResponse cambiarEstado(Long id, String estado) {
         Inscripcion inscripcion = getEntity(id);
         try {

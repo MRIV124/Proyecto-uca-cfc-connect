@@ -8,6 +8,7 @@ public interface CotizacionService {
     List<CotizacionResponse> findAll();
     CotizacionResponse findById(Long id);
     CotizacionResponse create(CotizacionRequest request);
+    CotizacionResponse update(Long id, CotizacionRequest request);
     void delete(Long id);
     CotizacionResponse aprobar(Long id);
     CotizacionResponse rechazar(Long id);

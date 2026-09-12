@@ -8,6 +8,7 @@ public interface PagoService {
     List<PagoResponse> findAll();
     PagoResponse findById(Long id);
     PagoResponse create(PagoRequest request);
+    PagoResponse update(Long id, PagoRequest request);
     void delete(Long id);
     PagoResponse confirmar(Long id);
 }

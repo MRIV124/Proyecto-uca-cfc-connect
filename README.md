@@ -108,6 +108,8 @@ Interfaces que extienden `JpaRepository<Entidad, Long>`. Spring Data JPA genera 
 ### Domain
 Entidades `@Entity` que representan las tablas de la base de datos, con sus relaciones (`@ManyToOne`) y reglas de negocio simples (por ejemplo `tieneCupoDisponible()`).
 
+> **Nota sobre el esquema de base de datos:** el proyecto **no** ejecuta ningun script `.sql` en tiempo de arranque. El esquema real (tablas, columnas, llaves foraneas) lo genera Hibernate automaticamente a partir de las entidades `@Entity`, mediante `spring.jpa.hibernate.ddl-auto=update`. El archivo [`docs/schema.sql`](docs/schema.sql) existe unicamente como **documentacion** para el informe de la fase, y se genero leyendo columna por columna las entidades reales — por lo tanto solo contiene las 10 tablas que en verdad existen en el codigo (no incluye tablas como `categorias` o `agenda`, que no se implementaron en esta fase).
+
 ### DTO (Request / Response)
 Separan el modelo de persistencia del contrato de la API. Los `*Request` llevan las anotaciones de validacion; los `*Response` controlan que datos se exponen (por ejemplo, `Usuario` nunca expone el `password`).
 
@@ -163,6 +165,11 @@ src/
 │
 └── test/
     └── java/sv/edu/udb/cfcconnect/...
+
+docs/
+└── schema.sql   # DDL de referencia/documentacion, generado a partir de las
+                 # entidades reales. NO se ejecuta en tiempo de arranque
+                 # (el esquema real lo crea Hibernate via ddl-auto=update).
 ```
 
 Cada modulo de negocio replica el mismo patron (`domain`, `dto`, `repository`, `service`, `service/implementation`, `controller`), lo que facilita que cada integrante del equipo trabaje su modulo de forma independiente.
@@ -181,6 +188,8 @@ Cada modulo de negocio replica el mismo patron (`domain`, `dto`, `repository`, `
 | Espacios      | Administración de espacios disponibles                  | ✅   | `PATCH /espacios/{id}/reservar`, `/liberar` |
 | Catering      | Gestión de servicios de alimentación                    | ✅   | — |
 | Pagos         | Registro y control de pagos                              | ✅   | `PATCH /pagos/{id}/confirmar` |
+
+> Los 10 módulos cuentan con CRUD **completo** (`GET`, `GET /{id}`, `POST`, `PUT`, `DELETE`). Cotizaciones, Inscripciones y Pagos combinan el `PUT` estándar con endpoints `PATCH` puntuales para las transiciones de estado propias de su flujo de negocio (aprobar/rechazar, cambiar estado, confirmar).
 | Usuarios      | Administración de usuarios                               | ✅   | — |
 | Roles         | Gestión de permisos y accesos                            | ✅   | — |
 
@@ -212,7 +221,8 @@ Cada modulo de negocio replica el mismo patron (`domain`, `dto`, `repository`, `
 * [x] **Persistencia con JPA/Hibernate**: todas las entidades (`Cliente`, `Curso`, `Diplomado`, `Espacio`, `ServicioCatering`, `Inscripcion`, `Cotizacion`, `Pago`, `Usuario`, `Rol`) se mapearon como `@Entity`, con relaciones `@ManyToOne` donde corresponde (por ejemplo `Inscripcion → Cliente`, `Inscripcion → Curso`).
 * [x] **Base de datos**: perfil por defecto con **H2 en memoria** (cero configuración, ideal para desarrollo y pruebas) y perfil `mysql` listo para producción (`application-mysql.properties`).
 * [x] **DataSeeder**: carga automática de datos de prueba al iniciar la aplicación (roles, clientes, cursos, diplomados, espacios y catering), incluyendo un curso sin cupo para poder probar la regla de negocio de inmediato.
-* [x] **CRUD completo** (`GET`, `GET /{id}`, `POST`, `PUT`, `DELETE`) en los 10 módulos, además de endpoints de negocio: inscribir participante, reservar/liberar espacio, aprobar/rechazar cotización y confirmar pago.
+* [x] **CRUD completo** (`GET`, `GET /{id}`, `POST`, `PUT`, `DELETE`) en los **10 módulos sin excepción** — incluyendo `PUT` en Cotización, Inscripción y Pago, que inicialmente solo tenían endpoints `PATCH` de transición de estado (aprobar/rechazar, cambiar estado, confirmar) y no un `PUT` real de edición.
+* [x] **Esquema de base de datos sin inconsistencias**: el proyecto no ejecuta ningún `.sql` en tiempo de arranque (el esquema lo genera Hibernate vía `ddl-auto=update`). Se agregó `docs/schema.sql` solo como documentación de referencia, generado columna por columna desde las entidades `@Entity` reales, para que no describa tablas o campos que no existen en el código (ver nota en la sección *Arquitectura*).
 * [x] **DTOs de entrada y salida** (`*Request` / `*Response`) para no exponer las entidades JPA directamente (por ejemplo, `UsuarioResponse` nunca expone el `password`).
 * [x] **Validaciones** con Jakarta Bean Validation: `@Valid`, `@NotBlank`, `@NotNull`, `@Email`, `@Size`, `@Pattern`, `@Positive`, `@PositiveOrZero` en todos los DTO `*Request`.
 * [x] **Manejo centralizado de excepciones** con `@ControllerAdvice` + `@ExceptionHandler` (`GlobalExceptionHandler`), que traduce cada excepción a un código HTTP y a un cuerpo `ApiError` consistente:
@@ -322,6 +332,7 @@ Mismo patrón que Cursos: `GET`, `GET /{id}`, `POST`, `PUT`, `PATCH /{id}/inscri
 | GET | `/inscripciones` | Listar todas las inscripciones |
 | GET | `/inscripciones/{id}` | Obtener una inscripción por id |
 | POST | `/inscripciones` | Crear una inscripción (`clienteId`, `cursoId`) |
+| PUT | `/inscripciones/{id}` | Actualizar cliente/curso de una inscripción (ajusta cupos si el curso cambia) |
 | PATCH | `/inscripciones/{id}/estado?estado=CONFIRMADA` | Cambiar estado (`PENDIENTE`, `CONFIRMADA`, `CANCELADA`, `FINALIZADA`) |
 | DELETE | `/inscripciones/{id}` | Eliminar una inscripción |
 
@@ -332,6 +343,7 @@ Mismo patrón que Cursos: `GET`, `GET /{id}`, `POST`, `PUT`, `PATCH /{id}/inscri
 | GET | `/cotizaciones` | Listar todas las cotizaciones |
 | GET | `/cotizaciones/{id}` | Obtener una cotización por id |
 | POST | `/cotizaciones` | Solicitar una cotización (`clienteId`, `tipo`, `descripcion`, `total`) |
+| PUT | `/cotizaciones/{id}` | Actualizar una cotización (solo si está PENDIENTE o EN_PROCESO) |
 | PATCH | `/cotizaciones/{id}/aprobar` | Aprobar una cotización |
 | PATCH | `/cotizaciones/{id}/rechazar` | Rechazar una cotización |
 | DELETE | `/cotizaciones/{id}` | Eliminar una cotización |
@@ -361,6 +373,7 @@ CRUD estándar: `GET`, `GET /{id}`, `POST`, `PUT`, `DELETE` sobre los servicios 
 | GET | `/pagos` | Listar todos los pagos |
 | GET | `/pagos/{id}` | Obtener un pago por id |
 | POST | `/pagos` | Registrar un pago (`clienteId`, `tipoReferencia`, `referenciaId`, `monto`, `metodo`) |
+| PUT | `/pagos/{id}` | Actualizar un pago (rechazado si ya está `PAGADO`) |
 | PATCH | `/pagos/{id}/confirmar` | Confirmar el pago (estado → `PAGADO`) |
 | DELETE | `/pagos/{id}` | Eliminar un pago |
 

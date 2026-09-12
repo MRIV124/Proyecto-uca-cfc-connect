@@ -40,16 +40,8 @@ public class PagoServiceImpl implements PagoService {
 
         Pago pago = new Pago();
         pago.setCliente(cliente);
-
-        try {
-            pago.setTipoReferencia(Pago.TipoReferencia.valueOf(request.getTipoReferencia().toUpperCase()));
-            pago.setMetodo(Pago.Metodo.valueOf(request.getMetodo().toUpperCase()));
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException(
-                    "tipoReferencia debe ser INSCRIPCION/COTIZACION/ESPACIO/CATERING y "
-                            + "metodo debe ser EFECTIVO/TARJETA/TRANSFERENCIA/DEPOSITO");
-        }
-
+        pago.setTipoReferencia(parseTipoReferencia(request.getTipoReferencia()));
+        pago.setMetodo(parseMetodo(request.getMetodo()));
         pago.setReferenciaId(request.getReferenciaId());
         pago.setMonto(request.getMonto());
         pago.setEstado(Pago.Estado.PENDIENTE);
@@ -59,8 +51,46 @@ public class PagoServiceImpl implements PagoService {
     }
 
     @Override
+    public PagoResponse update(Long id, PagoRequest request) {
+        Pago pago = getEntity(id);
+
+        // Regla de negocio: un pago ya confirmado no deberia poder modificarse.
+        if (pago.getEstado() == Pago.Estado.PAGADO) {
+            throw new IllegalArgumentException("No se puede modificar un pago que ya fue confirmado (PAGADO).");
+        }
+
+        Cliente cliente = clienteRepository.findById(request.getClienteId())
+                .orElseThrow(() -> ResourceNotFoundException.of("Cliente", request.getClienteId()));
+
+        pago.setCliente(cliente);
+        pago.setTipoReferencia(parseTipoReferencia(request.getTipoReferencia()));
+        pago.setMetodo(parseMetodo(request.getMetodo()));
+        pago.setReferenciaId(request.getReferenciaId());
+        pago.setMonto(request.getMonto());
+        // El estado se maneja por separado con /confirmar, no se pisa aqui.
+
+        return PagoResponse.fromEntity(repository.save(pago));
+    }
+
+    @Override
     public void delete(Long id) {
         repository.delete(getEntity(id));
+    }
+
+    private Pago.TipoReferencia parseTipoReferencia(String valor) {
+        try {
+            return Pago.TipoReferencia.valueOf(valor.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("tipoReferencia debe ser INSCRIPCION, COTIZACION, ESPACIO o CATERING");
+        }
+    }
+
+    private Pago.Metodo parseMetodo(String valor) {
+        try {
+            return Pago.Metodo.valueOf(valor.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("metodo debe ser EFECTIVO, TARJETA, TRANSFERENCIA o DEPOSITO");
+        }
     }
 
     @Override

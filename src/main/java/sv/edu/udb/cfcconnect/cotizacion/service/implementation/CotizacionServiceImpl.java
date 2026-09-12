@@ -39,21 +39,38 @@ public class CotizacionServiceImpl implements CotizacionService {
         Cliente cliente = clienteRepository.findById(request.getClienteId())
                 .orElseThrow(() -> ResourceNotFoundException.of("Cliente", request.getClienteId()));
 
-        Cotizacion.Tipo tipo;
-        try {
-            tipo = Cotizacion.Tipo.valueOf(request.getTipo().toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException(
-                    "Tipo invalido. Valores permitidos: CURSO, DIPLOMADO, ESPACIO, CATERING, COMBINADO");
-        }
-
         Cotizacion cotizacion = new Cotizacion();
         cotizacion.setCliente(cliente);
-        cotizacion.setTipo(tipo);
+        cotizacion.setTipo(parseTipo(request.getTipo()));
         cotizacion.setDescripcion(request.getDescripcion());
         cotizacion.setTotal(request.getTotal());
         cotizacion.setEstado(Cotizacion.Estado.PENDIENTE);
         cotizacion.setFecha(LocalDate.now());
+
+        return CotizacionResponse.fromEntity(repository.save(cotizacion));
+    }
+
+    @Override
+    public CotizacionResponse update(Long id, CotizacionRequest request) {
+        Cotizacion cotizacion = getEntity(id);
+
+        // Regla de negocio: una cotizacion ya resuelta (aprobada o rechazada) no deberia
+        // poder editarse; si se necesita cambiar algo, se crea una nueva cotizacion.
+        if (cotizacion.getEstado() == Cotizacion.Estado.APROBADA
+                || cotizacion.getEstado() == Cotizacion.Estado.RECHAZADA) {
+            throw new ReglaNegocioException(
+                    "No se puede editar una cotizacion que ya fue " + cotizacion.getEstado().name().toLowerCase() + ".");
+        }
+
+        Cliente cliente = clienteRepository.findById(request.getClienteId())
+                .orElseThrow(() -> ResourceNotFoundException.of("Cliente", request.getClienteId()));
+
+        cotizacion.setCliente(cliente);
+        cotizacion.setTipo(parseTipo(request.getTipo()));
+        cotizacion.setDescripcion(request.getDescripcion());
+        cotizacion.setTotal(request.getTotal());
+        // El estado y la fecha de creacion no se modifican en un update; para eso
+        // existen los endpoints especificos /aprobar y /rechazar.
 
         return CotizacionResponse.fromEntity(repository.save(cotizacion));
     }
@@ -82,6 +99,15 @@ public class CotizacionServiceImpl implements CotizacionService {
         }
         cotizacion.setEstado(Cotizacion.Estado.RECHAZADA);
         return CotizacionResponse.fromEntity(repository.save(cotizacion));
+    }
+
+    private Cotizacion.Tipo parseTipo(String tipo) {
+        try {
+            return Cotizacion.Tipo.valueOf(tipo.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException(
+                    "Tipo invalido. Valores permitidos: CURSO, DIPLOMADO, ESPACIO, CATERING, COMBINADO");
+        }
     }
 
     private Cotizacion getEntity(Long id) {
