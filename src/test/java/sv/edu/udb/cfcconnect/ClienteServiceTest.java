@@ -1,27 +1,33 @@
 package sv.edu.udb.cfcconnect;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import sv.edu.udb.cfcconnect.repository.domain.Cliente;
-import sv.edu.udb.cfcconnect.service.ClienteService;
-
-import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
+import sv.edu.udb.cfcconnect.cliente.dto.ClienteResponse;
+import sv.edu.udb.cfcconnect.cliente.service.ClienteService;
 
 @SpringBootTest
 public class ClienteServiceTest {
+
     @Autowired
     private ClienteService clienteService;
 
     @Test
-    void shouldReturnCliente(){
+    void shouldReturnClienteSeedadoPorId() {
+        ClienteResponse cliente = clienteService.findById(1L);
 
-        Cliente cliente = clienteService.findById(1L);
-
-        assertEquals("Juan Pérez",cliente.getNombre());
-
+        assertEquals("Juan Perez", cliente.getNombre());
+        assertEquals("juan@gmail.com", cliente.getCorreo());
     }
 
-    private void assertEquals(String juanPérez, String nombre) {
+    @Test
+    void shouldListarTodosLosClientes() {
+        var clientes = clienteService.findAll();
+
+        assertFalse(clientes.isEmpty());
+        assertEquals(2, clientes.size());
     }
 }
