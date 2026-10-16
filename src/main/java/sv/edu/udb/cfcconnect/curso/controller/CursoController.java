@@ -1,5 +1,9 @@
 package sv.edu.udb.cfcconnect.curso.controller;
 
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -66,5 +70,16 @@ public class CursoController {
     public ResponseEntity<Void> eliminarCurso(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Buscar cursos con filtros, paginacion y ordenamiento",
+            description = "Filtros opcionales: nombre (coincidencia parcial) y soloConCupo=true. "
+                    + "Paginacion: page y size. Orden: sort=campo,asc|desc (ej. sort=precio,desc).")
+    @GetMapping("/buscar")
+    public Page<CursoResponse> buscarCursos(
+            @RequestParam(required = false, defaultValue = "") String nombre,
+            @RequestParam(required = false, defaultValue = "false") boolean soloConCupo,
+            @PageableDefault(size = 10, sort = "nombre") Pageable pageable) {
+        return service.buscar(nombre, soloConCupo, pageable);
     }
 }

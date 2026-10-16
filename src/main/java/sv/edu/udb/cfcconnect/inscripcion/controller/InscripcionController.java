@@ -31,10 +31,13 @@ public class InscripcionController {
         this.service = service;
     }
 
-    @Operation(summary = "Listar todas las inscripciones")
+    @Operation(summary = "Listar inscripciones",
+            description = "Filtros opcionales: ?clienteId= y/o ?cursoId=. Sin filtros devuelve todas.")
     @GetMapping
-    public List<InscripcionResponse> getInscripciones() {
-        return service.findAll();
+    public List<InscripcionResponse> getInscripciones(
+            @RequestParam(required = false) Long clienteId,
+            @RequestParam(required = false) Long cursoId) {
+        return service.buscar(clienteId, cursoId);
     }
 
     @Operation(summary = "Obtener una inscripcion por id")

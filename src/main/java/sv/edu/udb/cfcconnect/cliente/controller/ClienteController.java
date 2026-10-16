@@ -1,5 +1,9 @@
 package sv.edu.udb.cfcconnect.cliente.controller;
 
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -58,5 +62,16 @@ public class ClienteController {
     public ResponseEntity<Void> eliminarCliente(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Buscar clientes con filtros, paginacion y ordenamiento",
+            description = "Filtros opcionales: nombre y correo (coincidencia parcial). "
+                    + "Paginacion: page y size. Orden: sort=campo,asc|desc (ej. sort=nombre,asc).")
+    @GetMapping("/buscar")
+    public Page<ClienteResponse> buscarClientes(
+            @RequestParam(required = false, defaultValue = "") String nombre,
+            @RequestParam(required = false, defaultValue = "") String correo,
+            @PageableDefault(size = 10, sort = "nombre") Pageable pageable) {
+        return service.buscar(nombre, correo, pageable);
     }
 }

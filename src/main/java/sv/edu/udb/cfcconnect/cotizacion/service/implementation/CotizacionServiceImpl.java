@@ -114,4 +114,19 @@ public class CotizacionServiceImpl implements CotizacionService {
         return repository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("Cotizacion", id));
     }
+
+    @Override
+    public List<CotizacionResponse> buscar(Long clienteId, Cotizacion.Estado estado) {
+        List<Cotizacion> resultado;
+        if (clienteId != null && estado != null) {
+            resultado = repository.findByClienteIdAndEstado(clienteId, estado);
+        } else if (clienteId != null) {
+            resultado = repository.findByClienteId(clienteId);
+        } else if (estado != null) {
+            resultado = repository.findByEstado(estado);
+        } else {
+            resultado = repository.findAll();
+        }
+        return resultado.stream().map(CotizacionResponse::fromEntity).toList();
+    }
 }

@@ -7,4 +7,6 @@ import sv.edu.udb.cfcconnect.pago.domain.Pago;
 public interface PagoRepository extends JpaRepository<Pago, Long> {
     List<Pago> findByClienteId(Long clienteId);
     List<Pago> findByEstado(Pago.Estado estado);
+
+    List<Pago> findByClienteIdAndEstado(Long clienteId, Pago.Estado estado);
 }

@@ -104,4 +104,19 @@ public class PagoServiceImpl implements PagoService {
         return repository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("Pago", id));
     }
+
+    @Override
+    public List<PagoResponse> buscar(Long clienteId, Pago.Estado estado) {
+        List<Pago> resultado;
+        if (clienteId != null && estado != null) {
+            resultado = repository.findByClienteIdAndEstado(clienteId, estado);
+        } else if (clienteId != null) {
+            resultado = repository.findByClienteId(clienteId);
+        } else if (estado != null) {
+            resultado = repository.findByEstado(estado);
+        } else {
+            resultado = repository.findAll();
+        }
+        return resultado.stream().map(PagoResponse::fromEntity).toList();
+    }
 }

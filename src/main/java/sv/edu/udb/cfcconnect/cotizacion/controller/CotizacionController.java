@@ -1,5 +1,7 @@
 package sv.edu.udb.cfcconnect.cotizacion.controller;
 
+import sv.edu.udb.cfcconnect.cotizacion.domain.Cotizacion;
+import org.springframework.web.bind.annotation.RequestParam;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,10 +32,13 @@ public class CotizacionController {
         this.service = service;
     }
 
-    @Operation(summary = "Listar todas las cotizaciones")
+    @Operation(summary = "Listar cotizaciones",
+            description = "Filtros opcionales: ?clienteId= y/o ?estado=PENDIENTE|EN_PROCESO|APROBADA|RECHAZADA. Sin filtros devuelve todas.")
     @GetMapping
-    public List<CotizacionResponse> getCotizaciones() {
-        return service.findAll();
+    public List<CotizacionResponse> getCotizaciones(
+            @RequestParam(required = false) Long clienteId,
+            @RequestParam(required = false) Cotizacion.Estado estado) {
+        return service.buscar(clienteId, estado);
     }
 
     @Operation(summary = "Obtener una cotizacion por id")

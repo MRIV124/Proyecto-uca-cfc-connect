@@ -1,5 +1,7 @@
 package sv.edu.udb.cfcconnect.curso.service.implementation;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import sv.edu.udb.cfcconnect.curso.domain.Curso;
@@ -74,5 +76,11 @@ public class CursoServiceImpl implements CursoService {
         // Caso de fallo por recurso inexistente -> ResourceNotFoundException -> HTTP 404.
         return repository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("Curso", id));
+    }
+
+    @Override
+    public Page<CursoResponse> buscar(String nombre, boolean soloConCupo, Pageable pageable) {
+        String filtro = nombre == null ? "" : nombre.trim();
+        return repository.buscar(filtro, soloConCupo, pageable).map(CursoResponse::fromEntity);
     }
 }

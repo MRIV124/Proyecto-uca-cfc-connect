@@ -7,4 +7,6 @@ import sv.edu.udb.cfcconnect.inscripcion.domain.Inscripcion;
 public interface InscripcionRepository extends JpaRepository<Inscripcion, Long> {
     List<Inscripcion> findByClienteId(Long clienteId);
     List<Inscripcion> findByCursoId(Long cursoId);
+
+    List<Inscripcion> findByClienteIdAndCursoId(Long clienteId, Long cursoId);
 }

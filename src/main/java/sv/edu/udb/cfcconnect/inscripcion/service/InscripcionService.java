@@ -11,4 +11,7 @@ public interface InscripcionService {
     InscripcionResponse update(Long id, InscripcionRequest request);
     InscripcionResponse cambiarEstado(Long id, String estado);
     void delete(Long id);
+
+    /** Filtra por cliente y/o curso (ambos opcionales; sin filtros devuelve todo). */
+    List<InscripcionResponse> buscar(Long clienteId, Long cursoId);
 }

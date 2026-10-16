@@ -130,4 +130,19 @@ public class InscripcionServiceImpl implements InscripcionService {
         return repository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("Inscripcion", id));
     }
+
+    @Override
+    public List<InscripcionResponse> buscar(Long clienteId, Long cursoId) {
+        List<Inscripcion> resultado;
+        if (clienteId != null && cursoId != null) {
+            resultado = repository.findByClienteIdAndCursoId(clienteId, cursoId);
+        } else if (clienteId != null) {
+            resultado = repository.findByClienteId(clienteId);
+        } else if (cursoId != null) {
+            resultado = repository.findByCursoId(cursoId);
+        } else {
+            resultado = repository.findAll();
+        }
+        return resultado.stream().map(InscripcionResponse::fromEntity).toList();
+    }
 }
