@@ -1,5 +1,7 @@
 package sv.edu.udb.cfcconnect.cliente.service.implementation;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import sv.edu.udb.cfcconnect.cliente.domain.Cliente;
@@ -73,5 +75,12 @@ public class ClienteServiceImpl implements ClienteService {
     private Cliente getEntity(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("Cliente", id));
+    }
+
+    @Override
+    public Page<ClienteResponse> buscar(String nombre, String correo, Pageable pageable) {
+        String n = nombre == null ? "" : nombre.trim();
+        String c = correo == null ? "" : correo.trim();
+        return repository.buscar(n, c, pageable).map(ClienteResponse::fromEntity);
     }
 }

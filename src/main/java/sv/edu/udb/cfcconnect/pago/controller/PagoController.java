@@ -1,5 +1,7 @@
 package sv.edu.udb.cfcconnect.pago.controller;
 
+import sv.edu.udb.cfcconnect.pago.domain.Pago;
+import org.springframework.web.bind.annotation.RequestParam;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,10 +32,13 @@ public class PagoController {
         this.service = service;
     }
 
-    @Operation(summary = "Listar todos los pagos")
+    @Operation(summary = "Listar pagos",
+            description = "Filtros opcionales: ?clienteId= y/o ?estado=PENDIENTE|PARCIAL|PAGADO. Sin filtros devuelve todos.")
     @GetMapping
-    public List<PagoResponse> getPagos() {
-        return service.findAll();
+    public List<PagoResponse> getPagos(
+            @RequestParam(required = false) Long clienteId,
+            @RequestParam(required = false) Pago.Estado estado) {
+        return service.buscar(clienteId, estado);
     }
 
     @Operation(summary = "Obtener un pago por id")

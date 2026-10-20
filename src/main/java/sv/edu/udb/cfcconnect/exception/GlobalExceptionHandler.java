@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * Manejo centralizado de excepciones para toda la API REST del proyecto.
@@ -55,6 +56,16 @@ public class GlobalExceptionHandler {
         ApiError error = ApiError.of(HttpStatus.BAD_REQUEST.value(), "Validation Failed",
                 "Uno o mas campos no son validos", request.getRequestURI());
         error.setValidationErrors(fieldErrors);
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    // 400 - parametro con un valor que no corresponde al tipo esperado
+    // (ej. ?estado=XYZ en un filtro que solo acepta PENDIENTE, PARCIAL o PAGADO).
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        ApiError error = ApiError.of(HttpStatus.BAD_REQUEST.value(), "Bad Request",
+                "El valor '" + ex.getValue() + "' no es valido para el parametro '" + ex.getName() + "'",
+                request.getRequestURI());
         return ResponseEntity.badRequest().body(error);
     }
 

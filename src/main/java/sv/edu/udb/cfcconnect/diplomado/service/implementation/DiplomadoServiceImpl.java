@@ -1,5 +1,7 @@
 package sv.edu.udb.cfcconnect.diplomado.service.implementation;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import sv.edu.udb.cfcconnect.diplomado.domain.Diplomado;
@@ -68,5 +70,11 @@ public class DiplomadoServiceImpl implements DiplomadoService {
     private Diplomado getEntity(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("Diplomado", id));
+    }
+
+    @Override
+    public Page<DiplomadoResponse> buscar(String nombre, boolean soloConCupo, Pageable pageable) {
+        String filtro = nombre == null ? "" : nombre.trim();
+        return repository.buscar(filtro, soloConCupo, pageable).map(DiplomadoResponse::fromEntity);
     }
 }
