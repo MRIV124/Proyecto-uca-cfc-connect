@@ -25,7 +25,8 @@ public class Usuario {
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
-    // NOTA: en la Fase 3 se cifrara con BCrypt (PasswordEncoder de Spring Security).
+    // Hash BCrypt de la contrasena (nunca se guarda en texto plano).
+    // El cifrado lo aplica UsuarioServiceImpl con el PasswordEncoder de Spring Security.
     @Column(nullable = false, length = 255)
     private String password;
 

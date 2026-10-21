@@ -1,0 +1,114 @@
+### Pruebas de seguridad (Fase 3) - Spring Security + BCrypt + JWT
+### Uso:
+###   - VS Code: extensión "REST Client" (hucha.rest.vscode-rest-client) -> clic en "Send CodeLens" sobre cada bloque
+###   - IntelliJ IDEA: plugin "HTTP Client" -> clic en el icono de la flecha verde de cada bloque
+###   - Variables a definir al inicio (ajustar si cambiaste la clave JWT):
+###     @baseUrl  = http://localhost:8080
+###     @token    = (pegar aqui el token devuelto por POST /auth/login)
+###     @tokenRec = (pegar aqui el token de recepcion@cfc.edu.sv)
+###
+### Para obtener los tokens, ejecuta primero los bloques "1. LOGIN" y "2. LOGIN RECEPCIONISTA"
+### y copia el valor de "token" en las variables de arriba.
+
+@baseUrl = http://localhost:8080
+@token =
+@tokenRec =
+
+### ---------------------------------------------------------------
+### 1. LOGIN ADMIN -> emite el token JWT (200)
+### ---------------------------------------------------------------
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@cfc.edu.sv",
+  "password": "Admin123*"
+}
+
+### ---------------------------------------------------------------
+### 2. LOGIN RECEPCIONISTA -> token con rol distinto (200)
+### ---------------------------------------------------------------
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "recepcion@cfc.edu.sv",
+  "password": "Recepcion123*"
+}
+
+### ---------------------------------------------------------------
+### 3. LOGIN con contrasena incorrecta -> 401 Unauthorized
+### ---------------------------------------------------------------
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@cfc.edu.sv",
+  "password": "clave-mala"
+}
+
+### ---------------------------------------------------------------
+### 4. Endpoint protegido SIN token -> 401 Unauthorized
+### ---------------------------------------------------------------
+GET {{baseUrl}}/clientes
+
+### ---------------------------------------------------------------
+### 5. Endpoint protegido CON token ADMIN -> 200 OK
+### ---------------------------------------------------------------
+GET {{baseUrl}}/clientes
+Authorization: Bearer {{token}}
+
+### ---------------------------------------------------------------
+### 6. Administration de usuarios con token ADMIN -> 200 OK
+### ---------------------------------------------------------------
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{token}}
+
+### ---------------------------------------------------------------
+### 7. Administration de usuarios con token RECEPCIONISTA -> 403 Forbidden
+### ---------------------------------------------------------------
+GET {{baseUrl}}/usuarios
+Authorization: Bearer {{tokenRec}}
+
+### ---------------------------------------------------------------
+### 8. Token invalido / alterado -> 401 Unauthorized
+### ---------------------------------------------------------------
+GET {{baseUrl}}/clientes
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBjZmMuIn0.firma-falsa
+
+### ---------------------------------------------------------------
+### 9. Datos de la sesion actual -> 200 OK
+### ---------------------------------------------------------------
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### ---------------------------------------------------------------
+### 10. Crear usuario (la contrasena se guarda cifrada con BCrypt) -> 201 Created
+### ---------------------------------------------------------------
+POST {{baseUrl}}/usuarios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Usuario de prueba",
+  "email": "prueba.http@cfc.edu.sv",
+  "password": "Prueba123*",
+  "rolId": 3,
+  "estado": true
+}
+
+### ---------------------------------------------------------------
+### 11. Login con el usuario recien creado -> 200 OK (confirma el hash BCrypt)
+### ---------------------------------------------------------------
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "prueba.http@cfc.edu.sv",
+  "password": "Prueba123*"
+}
+
+### ---------------------------------------------------------------
+### 12. Documentacion publica (sin token) -> 200 OK
+### ---------------------------------------------------------------
+GET {{baseUrl}}/v3/api-docs

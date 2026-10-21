@@ -1,6 +1,8 @@
 package sv.edu.udb.cfcconnect.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import sv.edu.udb.cfcconnect.catering.domain.ServicioCatering;
 import sv.edu.udb.cfcconnect.catering.repository.ServicioCateringRepository;
@@ -14,6 +16,8 @@ import sv.edu.udb.cfcconnect.espacio.domain.Espacio;
 import sv.edu.udb.cfcconnect.espacio.repository.EspacioRepository;
 import sv.edu.udb.cfcconnect.rol.domain.Rol;
 import sv.edu.udb.cfcconnect.rol.repository.RolRepository;
+import sv.edu.udb.cfcconnect.usuario.domain.Usuario;
+import sv.edu.udb.cfcconnect.usuario.repository.UsuarioRepository;
 
 /**
  * Carga datos de prueba al iniciar la aplicacion, para poder probar de
@@ -23,9 +27,16 @@ import sv.edu.udb.cfcconnect.rol.repository.RolRepository;
  *
  * Solo inserta datos si las tablas estan vacias, para no duplicar registros
  * en reinicios sucesivos durante el desarrollo.
+ *
+ * En la Fase 3 tambien crea los usuarios de prueba (con la contrasena cifrada
+ * con BCrypt) para poder iniciar sesion en POST /auth/login y obtener un
+ * token JWT.
  */
 @Component
 public class DataSeeder implements CommandLineRunner {
+
+    /** Prefijo de los hashes BCrypt (por ejemplo "$2a$10$..."). */
+    private static final String PREFIJO_BCRYPT = "$2";
 
     private final RolRepository rolRepository;
     private final ClienteRepository clienteRepository;
@@ -33,19 +44,37 @@ public class DataSeeder implements CommandLineRunner {
     private final DiplomadoRepository diplomadoRepository;
     private final EspacioRepository espacioRepository;
     private final ServicioCateringRepository servicioCateringRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Value("${app.security.admin.email:admin@cfc.edu.sv}")
+    private String adminEmail;
+
+    @Value("${app.security.admin.password:Admin123*}")
+    private String adminPassword;
+
+    @Value("${app.security.recepcionista.email:recepcion@cfc.edu.sv}")
+    private String recepcionistaEmail;
+
+    @Value("${app.security.recepcionista.password:Recepcion123*}")
+    private String recepcionistaPassword;
 
     public DataSeeder(RolRepository rolRepository,
                        ClienteRepository clienteRepository,
                        CursoRepository cursoRepository,
                        DiplomadoRepository diplomadoRepository,
                        EspacioRepository espacioRepository,
-                       ServicioCateringRepository servicioCateringRepository) {
+                       ServicioCateringRepository servicioCateringRepository,
+                       UsuarioRepository usuarioRepository,
+                       PasswordEncoder passwordEncoder) {
         this.rolRepository = rolRepository;
         this.clienteRepository = clienteRepository;
         this.cursoRepository = cursoRepository;
         this.diplomadoRepository = diplomadoRepository;
         this.espacioRepository = espacioRepository;
         this.servicioCateringRepository = servicioCateringRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -56,6 +85,8 @@ public class DataSeeder implements CommandLineRunner {
         seedDiplomados();
         seedEspacios();
         seedCatering();
+        seedUsuarios();
+        migrarContrasenasLegacy();
     }
 
     private void seedRoles() {
@@ -146,6 +177,52 @@ public class DataSeeder implements CommandLineRunner {
             s.setNombre((String) datos[0]);
             s.setPrecioPorPersona((Double) datos[1]);
             servicioCateringRepository.save(s);
+        }
+    }
+
+    /**
+     * Crea los usuarios de prueba con la contrasena cifrada con BCrypt, para
+     * poder iniciar sesion en {@code POST /auth/login}.
+     *
+     * <p>Se comprueba el correo (y no solo si la tabla esta vacia) para
+     * garantizar siempre un administrador con el que entrar, incluso en una
+     * base de datos MySQL que ya tenga usuarios de la Fase 2.</p>
+     */
+    private void seedUsuarios() {
+        crearUsuarioSiNoExiste("Administrador CFC", adminEmail, adminPassword, "ADMIN");
+        crearUsuarioSiNoExiste("Recepcion CFC", recepcionistaEmail, recepcionistaPassword, "RECEPCIONISTA");
+    }
+
+    private void crearUsuarioSiNoExiste(String nombre, String email, String password, String rolNombre) {
+        if (usuarioRepository.findByEmailIgnoreCase(email).isPresent()) return;
+
+        Rol rol = rolRepository.findByNombreIgnoreCase(rolNombre)
+                .orElseThrow(() -> new IllegalStateException("No se encontro el rol " + rolNombre));
+
+        Usuario usuario = new Usuario();
+        usuario.setNombre(nombre);
+        usuario.setEmail(email);
+        usuario.setPassword(passwordEncoder.encode(password));
+        usuario.setRol(rol);
+        usuario.setEstado(true);
+        usuarioRepository.save(usuario);
+    }
+
+    /**
+     * Migra a BCrypt las contrasenas que quedaron guardadas en texto plano en
+     * la Fase 2 (por ejemplo, en una base de datos MySQL con datos previos).
+     *
+     * <p>Sin esta migracion esos usuarios no podrian iniciar sesion, porque el
+     * login compara contra el hash BCrypt. Solo se tocan las contrasenas que
+     * aun no estan cifradas (las que no empiezan por {@code $2}).</p>
+     */
+    private void migrarContrasenasLegacy() {
+        for (Usuario usuario : usuarioRepository.findAll()) {
+            String password = usuario.getPassword();
+            if (password == null || password.startsWith(PREFIJO_BCRYPT)) continue;
+
+            usuario.setPassword(passwordEncoder.encode(password));
+            usuarioRepository.save(usuario);
         }
     }
 }

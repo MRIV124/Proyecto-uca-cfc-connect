@@ -1,6 +1,7 @@
 package sv.edu.udb.cfcconnect.usuario.service.implementation;
 
 import java.util.List;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import sv.edu.udb.cfcconnect.exception.ReglaNegocioException;
 import sv.edu.udb.cfcconnect.exception.ResourceNotFoundException;
@@ -17,10 +18,14 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     private final UsuarioRepository repository;
     private final RolRepository rolRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UsuarioServiceImpl(UsuarioRepository repository, RolRepository rolRepository) {
+    public UsuarioServiceImpl(UsuarioRepository repository,
+                               RolRepository rolRepository,
+                               PasswordEncoder passwordEncoder) {
         this.repository = repository;
         this.rolRepository = rolRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -69,7 +74,8 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         usuario.setNombre(request.getNombre());
         usuario.setEmail(request.getEmail());
-        usuario.setPassword(request.getPassword());
+        // La contrasena nunca se guarda en texto plano: se guarda el hash BCrypt.
+        usuario.setPassword(passwordEncoder.encode(request.getPassword()));
         usuario.setRol(rol);
         usuario.setEstado(request.getEstado() == null || request.getEstado());
     }
